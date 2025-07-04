@@ -51,7 +51,7 @@ def draw(celestial_body, win, display_distance_to_sun=True):
         win.blit(distance_text, (position_x_dist_text, position_y_dist_text))
 
 class Slider:
-    def __init__(self, pos: tuple, size: tuple, initial_val: float, min: float, max: float):
+    def __init__(self, pos: tuple, size: tuple, initial_val: float, min: float, max: float, value_unit: str):
         """
         This object defines a slider button that will change a continuous value while the program is running
         :param pos: position of the top left of the slider (tupple)
@@ -59,6 +59,7 @@ class Slider:
         :param initial_val: (float)
         :param min: (float)
         :param max: (float)
+        :param value_unit: what is displayed right next to slider after value
         """
 
         width_button = 10
@@ -73,8 +74,11 @@ class Slider:
         self.max = max
         self.initial_percentage = (initial_val-min)/(max-min)
 
+        self.value_unit = value_unit
+
         self.container_rect = pygame.Rect(self.pos[0], self.pos[1], self.size[0], self.size[1])
-        self.button_rect = pygame.Rect(self.pos[0] + self.initial_percentage*(self.right_pos - self.pos[0])-width_button/2, self.pos[1], width_button, self.size[1])
+        x_pos = self.pos[0] + self.initial_percentage*(self.right_pos - self.pos[0])-width_button/2
+        self.button_rect = pygame.Rect(x_pos, self.pos[1], width_button, self.size[1])
     def move_slidder(self, mouse_pos):
         self.button_rect.centerx = mouse_pos[0]
     def get_value(self):
@@ -85,7 +89,9 @@ class Slider:
     def render(self):
         pygame.draw.rect(WIN, 'darkgray', self.container_rect)
         pygame.draw.rect(WIN, 'blue', self.button_rect)
-simu_TIMESTEP_slider = Slider((40,40), (300,15), 24, 1, 732)
+        slider_text = FONT.render(f"{round(self.get_value())} {self.value_unit}", 1, WHITE)
+        WIN.blit(slider_text, (self.right_pos+5, self.pos[1]))
+simu_TIMESTEP_slider = Slider((40,40), (600,15), 24, 1, 600, "hour/sec")
 
 def main():
     """
@@ -146,5 +152,12 @@ ajouter display vitesse et acceleration
 bouton pour reset view sur soleil
 
 faire en sorte de cal plusieur fois la dérivé pr éviter siscretization trop brusque si timestep haut (garder le même fps mais fair eplus sieur fois le update avec un timestec limité)
+faire test ou on prend plusieur TIMESTEP et au terme d'un temps de simulation égal comparer les résultat
+    tester avec et sans le slipstep
+
+bug : get_value not correspond to value set in first place
+selon gpt c'est une erreur d'arondis
+en effet si je passe de max vlaue 732 à 48 il n'y a plus d'erreur, le slider a assez de px par rapport à ce qu'il rpz
+test anecdotique : faire en sorte que la valeur qu'on met dans le slider correspond à celle qui est récupérer par le script
 
  """
