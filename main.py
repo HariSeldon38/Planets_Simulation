@@ -128,8 +128,13 @@ def main():
             if event.type == pygame.QUIT:
                 run = False
 
+        nb_days_TIMESTEP = Celestial.get_simu_TIMESTEP()/(3600*24) #we divide the timestep in days
+        nb_complete_days = round(nb_days_TIMESTEP)
+        remains = nb_days_TIMESTEP - nb_complete_days #we keep the rest
         for planet in Celestial.list_bodies:
-            planet.update_position(Celestial.list_bodies)
+            for i in range(nb_complete_days): #we will update 1 day at the time
+                planet.update_position(Celestial.list_bodies, timestep=3600*24)
+            planet.update_position(Celestial.list_bodies, timestep=remains*3600*24)
             draw(planet, WIN)
 
         pygame.display.update()
