@@ -11,6 +11,7 @@ class Celestial:
     """
     AU = 1.495979e11 #Astronomical Unit in meters (distance Sun-Earth)
     G = 6.67428e-11 #Gravitationnal cst
+    list_bodies = []
 
     #Next block is concerning the simulation
     simu_SCALE = None
@@ -25,20 +26,21 @@ class Celestial:
         cls.simu_TIMESTEP = time_scale
 
 
-    def __init__(self, x, y, radius, color, mass):
+    def __init__(self, name, x, y, radius, color, mass):
         """ TBD """
+        self.name = name
         self.x = x #meters away from the Sun
         self.y = y
         self.radius = radius
         self.color = color
         self.mass = mass
-
         self.orbit = [] #keep track of all the pts the planet as traveled along
         self.sun = False #if the planet is the Sun we will not display orbit
         self.distance_to_sun = 0
-
         self.x_vel = 0 #x_axis velocity in m/s
         self.y_vel = 0 #y_axis velocity in m/s
+
+        self.list_bodies.append(self)
 
     def attraction(self, other):
         """
