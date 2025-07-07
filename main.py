@@ -104,7 +104,7 @@ def main():
 
     sun = Celestial("Sun", 0,0, 30, YELLOW, 1.98892e30) #radius is randomly picked, mass is accurate and in kg
     sun.sun = True
-    earth = Celestial("Earth", -1 * Celestial.AU, 0, 16, BLUE, 5.9742e24)
+    earth = Celestial("Earth", -1 * Celestial.AU, 0, 16, BLUE, 5.9742e24 * 1e4)
     earth.y_vel = 29.783 *1000
     mars = Celestial("Mars", -1.524 * Celestial.AU, 0, 12, RED, 6.39e23)
     mars.y_vel = 24.077 * 1000
