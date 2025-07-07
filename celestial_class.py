@@ -24,6 +24,9 @@ class Celestial:
     def set_simu_TIMESTEP(cls, time_scale):
         """set delta time in sec : the simu elapsed time between each update_position"""
         cls.simu_TIMESTEP = time_scale
+    @classmethod
+    def get_simu_TIMESTEP(cls):
+        return cls.simu_TIMESTEP
 
 
     def __init__(self, name, x, y, radius, color, mass):
@@ -62,7 +65,7 @@ class Celestial:
 
         return force_x, force_y
 
-    def update_position(self, planets):
+    def update_position(self, planets, timestep=simu_TIMESTEP):
         """
         Update the position of a given planet
         """
@@ -75,9 +78,9 @@ class Celestial:
             total_fx += fx
             total_fy += fy
 
-        self.x_vel += (total_fx / self.mass) * self.simu_TIMESTEP #F=m*a --> accel = F/m | a = dv/dt --> dv = a * dt
-        self.y_vel += (total_fy / self.mass) * self.simu_TIMESTEP
+        self.x_vel += (total_fx / self.mass) * timestep #F=m*a --> accel = F/m | a = dv/dt --> dv = a * dt
+        self.y_vel += (total_fy / self.mass) * timestep
 
-        self.x += self.x_vel * self.simu_TIMESTEP
-        self.y += self.y_vel * self.simu_TIMESTEP
+        self.x += self.x_vel * timestep
+        self.y += self.y_vel * timestep
         self.orbit.append((self.x, self.y))
