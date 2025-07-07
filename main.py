@@ -14,8 +14,10 @@ YELLOW = (255,255,0)
 BLUE = (100,149,237)
 RED = (188,39,50)
 DARK_GREY = (80,78,81)
+JUPITER = pygame.transform.scale(pygame.image.load("jupiter.png"), (25*2,25*2))
 
 FONT = pygame.font.SysFont("comicsans", 16)
+BACKGND = pygame.transform.scale(pygame.image.load("background.jpg"), (WIDTH, HEIGHT))
 
 Celestial.set_simu_SCALE(250/ Celestial.AU) #1AU=100px
 Celestial.set_simu_TIMESTEP(3600 *24) #1day
@@ -104,7 +106,7 @@ def main():
 
     sun = Celestial("Sun", 0,0, 30, YELLOW, 1.98892e30) #radius is randomly picked, mass is accurate and in kg
     sun.sun = True
-    earth = Celestial("Earth", -1 * Celestial.AU, 0, 16, BLUE, 5.9742e24 * 1e4)
+    earth = Celestial("Earth", -1 * Celestial.AU, 0, 16, BLUE, 5.9742e24)
     earth.y_vel = 29.783 *1000
     mars = Celestial("Mars", -1.524 * Celestial.AU, 0, 12, RED, 6.39e23)
     mars.y_vel = 24.077 * 1000
@@ -115,7 +117,7 @@ def main():
 
     while run:
         clock.tick(FPS)
-        WIN.fill("black") #fill the backgrnd to overwrite the planets from the previous frame
+        WIN.blit(BACKGND, (0,0))
         simu_TIMESTEP_slider.render()
 
         mouse_pos = pygame.mouse.get_pos()
@@ -163,7 +165,6 @@ faire test ou on prend plusieur TIMESTEP et au terme d'un temps de simulation é
 bug : get_value not correspond to value set in first place
 selon gpt c'est une erreur d'arondis
 en effet si je passe de max vlaue 732 à 48 il n'y a plus d'erreur, le slider a assez de px par rapport à ce qu'il rpz
-
 test anecdotique : faire en sorte que la valeur qu'on met dans le slider correspond à celle qui est récupérer par le script
 
  """
