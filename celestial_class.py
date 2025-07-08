@@ -14,6 +14,7 @@ class Celestial:
     list_bodies = []
 
     #Next block is concerning the simulation
+    debug = 0
     simu_SCALE = None
     simu_TIMESTEP = None
     @classmethod
@@ -22,17 +23,17 @@ class Celestial:
         cls.simu_SCALE = scale
     @classmethod
     def set_simu_TIMESTEP(cls, time_scale):
-        """set delta time in sec : the simu elapsed time between each update_position"""
+        """set delta time in sec : the simu elapsed time between each update_position
+        nb second passed per frame of the simu"""
         cls.simu_TIMESTEP = time_scale
     @classmethod
     def get_simu_TIMESTEP(cls):
         return cls.simu_TIMESTEP
 
-
-    def __init__(self, name, x, y, radius, color, mass):
+    def __init__(self, name, x, y, x_vel, y_vel, radius, color, mass):
         """ TBD """
         self.name = name
-        self.x = x #meters away from the Sun
+        self.x = x #meters away from the Sun (center)
         self.y = y
         self.radius = radius
         self.color = color
@@ -40,8 +41,8 @@ class Celestial:
         self.orbit = [] #keep track of all the pts the planet as traveled along
         self.sun = False #if the planet is the Sun we will not display orbit
         self.distance_to_sun = 0
-        self.x_vel = 0 #x_axis velocity in m/s
-        self.y_vel = 0 #y_axis velocity in m/s
+        self.x_vel = x_vel #x_axis velocity in m/s
+        self.y_vel = y_vel #y_axis velocity in m/s
 
         self.list_bodies.append(self)
 
@@ -84,3 +85,14 @@ class Celestial:
         self.x += self.x_vel * timestep
         self.y += self.y_vel * timestep
         self.orbit.append((self.x, self.y))
+
+    @classmethod
+    def reset_class(cls):
+        """method that reset the class to factory settings :
+        all instances of the class will be deleted"""
+        for body in cls.list_bodies:
+            del body
+        cls.list_bodies = []
+        cls.simu_SCALE = None
+        cls.simu_TIMESTEP = None
+        cls.debug = 0

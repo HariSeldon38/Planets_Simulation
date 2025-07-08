@@ -4,10 +4,7 @@ from celestial_class import Celestial
 """SETTING UP PYGAME WINDOW"""
 pygame.init()
 WIDTH, HEIGHT = 800, 800 #capitals cause constants
-WIN = pygame.display.set_mode((WIDTH,HEIGHT)) #this is our window (a pygame surface)
-pygame.display.set_caption("Planet Simulation")
-
-FPS = 30
+FPS = 30 #speed of simu depend s also on fps... not good
 
 WHITE = (255,255,255) #RGB values
 YELLOW = (255,255,0)
@@ -21,7 +18,6 @@ BACKGND = pygame.transform.scale(pygame.image.load("background.jpg"), (WIDTH, HE
 
 Celestial.set_simu_SCALE(250/ Celestial.AU) #1AU=100px
 Celestial.set_simu_TIMESTEP(3600 *24) #1day
-
 
 def draw(celestial_body, win, display_distance_to_sun=True):
     """
@@ -88,37 +84,49 @@ class Slider:
         val_range = self.right_pos - self.pos[0]
         button_val = self.button_rect.centerx - self.pos[0]
         return (button_val/val_range)*(self.max-self.min)+self.min
-    def render(self):
-        pygame.draw.rect(WIN, 'darkgray', self.container_rect)
-        pygame.draw.rect(WIN, 'blue', self.button_rect)
+    def render(self, win):
+        pygame.draw.rect(win, 'darkgray', self.container_rect)
+        pygame.draw.rect(win, 'blue', self.button_rect)
         slider_text = FONT.render(f"{round(self.get_value())} {self.value_unit}", 1, WHITE)
-        WIN.blit(slider_text, (self.right_pos+5, self.pos[1]))
-simu_TIMESTEP_slider = Slider((40,40), (600,15), 24, 1, 600, "hour/sec")
+        win.blit(slider_text, (self.right_pos+5, self.pos[1]))
 
-def main():
+def init_planets():
+    sun = Celestial("Sun", 0, 0, 0, 0, 30, YELLOW, 1.98892e30) #radius is randomly picked, mass is accurate and in kg
+    sun.sun = True
+    earth = Celestial("Earth", -1 * Celestial.AU, 0,  0, 29.783 *1000, 16, BLUE, 5.9742e24)
+    mars = Celestial("Mars", -1.524 * Celestial.AU, 0, 0, 24.077 * 1000, 12, RED, 6.39e23)
+    mercury = Celestial("Mercury", 0.387*Celestial.AU, 0, 0, -47.4 * 1000, 8, DARK_GREY, 3.30e23)
+    venus = Celestial("Venus", 0.723*Celestial.AU, 0, 0, -35.02 * 1000, 14, WHITE, 4.8685e24)
+
+init_planets()
+def main(duration=None):
     """
     This function create an infinite loop
     this is used to keep track of the events that are occuring
     here the only event is closing the window
+
+    param: duration: in sec, duration before the simulation is closed
+                    if None, simu ends only if manually closed
+
     """
+    WIN = pygame.display.set_mode((WIDTH, HEIGHT))  # this is our window (a pygame surface)
+    pygame.display.set_caption("Planet Simulation")
+    simu_TIMESTEP_slider = Slider((40, 40), (600, 15), 24, 1, 600, "hour/sec")
+
     clock = pygame.time.Clock() #needed in to ctrl speed of the sim and not let it be the speed of our computer
     run = True
 
-    sun = Celestial("Sun", 0,0, 30, YELLOW, 1.98892e30) #radius is randomly picked, mass is accurate and in kg
-    sun.sun = True
-    earth = Celestial("Earth", -1 * Celestial.AU, 0, 16, BLUE, 5.9742e24)
-    earth.y_vel = 29.783 *1000
-    mars = Celestial("Mars", -1.524 * Celestial.AU, 0, 12, RED, 6.39e23)
-    mars.y_vel = 24.077 * 1000
-    mercury = Celestial("Mercury", 0.387*Celestial.AU, 0, 8, DARK_GREY, 3.30e23)
-    mercury.y_vel = -47.4 * 1000
-    venus = Celestial("Venus", 0.723*Celestial.AU, 0, 14, WHITE, 4.8685e24)
-    venus.y_vel = -35.02  * 1000
+    if duration:
+        count = duration * FPS #nb of frame before exit
+        print(f'count = {count}')
+    else: count = 1
+    while run and count>0:
+        if duration:
+            count -= 1
 
-    while run:
         clock.tick(FPS)
         WIN.blit(BACKGND, (0,0))
-        simu_TIMESTEP_slider.render()
+        simu_TIMESTEP_slider.render(WIN)
 
         mouse_pos = pygame.mouse.get_pos()
         mouse_press = pygame.mouse.get_pressed()
@@ -131,6 +139,8 @@ def main():
                 run = False
 
         nb_days_TIMESTEP = Celestial.get_simu_TIMESTEP()/(3600*24) #we divide the timestep in days
+        Celestial.debug += nb_days_TIMESTEP
+        print(Celestial.debug)
         nb_complete_days = round(nb_days_TIMESTEP)
         remains = nb_days_TIMESTEP - nb_complete_days #we keep the rest
         for planet in Celestial.list_bodies:
@@ -143,24 +153,18 @@ def main():
 
     pygame.quit
 
-main()
+if __name__ == "__main__":
+    main()
 
 """what to do now : 
-button to speed up or slow down the simulation (with display current speed in days/s
  
 random asteroid that croses the screen (add it to planet list wich will be a class attribute and delete after too far away x or y
-
-move planet list into planet class
 
 day * 365 does not work why ?
 
 ajouter display vitesse et acceleration
 
 bouton pour reset view sur soleil
-
-faire en sorte de cal plusieur fois la dérivé pr éviter siscretization trop brusque si timestep haut (garder le même fps mais fair eplus sieur fois le update avec un timestec limité)
-faire test ou on prend plusieur TIMESTEP et au terme d'un temps de simulation égal comparer les résultat
-    tester avec et sans le slipstep
 
 bug : get_value not correspond to value set in first place
 selon gpt c'est une erreur d'arondis
