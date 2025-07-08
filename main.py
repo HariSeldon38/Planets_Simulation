@@ -1,23 +1,18 @@
 import pygame
 from celestial_class import Celestial
 
-"""SETTING UP PYGAME WINDOW"""
 pygame.init()
 WIDTH, HEIGHT = 800, 800 #capitals cause constants
 FPS = 30 #speed of simu depend s also on fps... not good
-
 WHITE = (255,255,255) #RGB values
 YELLOW = (255,255,0)
 BLUE = (100,149,237)
 RED = (188,39,50)
 DARK_GREY = (80,78,81)
 JUPITER = pygame.transform.scale(pygame.image.load("jupiter.png"), (25*2,25*2))
-
 FONT = pygame.font.SysFont("comicsans", 16)
 BACKGND = pygame.transform.scale(pygame.image.load("background.jpg"), (WIDTH, HEIGHT))
 
-Celestial.set_simu_SCALE(250/ Celestial.AU) #1AU=100px
-Celestial.set_simu_TIMESTEP(3600 *24) #1day
 
 def draw(celestial_body, win, display_distance_to_sun=True):
     """
@@ -98,7 +93,7 @@ def init_planets():
     mercury = Celestial("Mercury", 0.387*Celestial.AU, 0, 0, -47.4 * 1000, 8, DARK_GREY, 3.30e23)
     venus = Celestial("Venus", 0.723*Celestial.AU, 0, 0, -35.02 * 1000, 14, WHITE, 4.8685e24)
 
-init_planets()
+
 def main(duration=None):
     """
     This function create an infinite loop
@@ -106,19 +101,19 @@ def main(duration=None):
     here the only event is closing the window
 
     param: duration: in sec, duration before the simulation is closed
-                    if None, simu ends only if manually closed
+                     if None, simu ends only if manually closed
+                     if 0, simu will not run
 
     """
     WIN = pygame.display.set_mode((WIDTH, HEIGHT))  # this is our window (a pygame surface)
     pygame.display.set_caption("Planet Simulation")
-    simu_TIMESTEP_slider = Slider((40, 40), (600, 15), 24, 1, 600, "hour/sec")
+    simu_TIMESTEP_slider = Slider((40, 40), (600, 15), Celestial.simu_TIMESTEP/3600, 1, 600, "hour/sec")
 
     clock = pygame.time.Clock() #needed in to ctrl speed of the sim and not let it be the speed of our computer
     run = True
 
-    if duration:
+    if duration or duration==0:
         count = duration * FPS #nb of frame before exit
-        print(f'count = {count}')
     else: count = 1
     while run and count>0:
         if duration:
@@ -139,8 +134,6 @@ def main(duration=None):
                 run = False
 
         nb_days_TIMESTEP = Celestial.get_simu_TIMESTEP()/(3600*24) #we divide the timestep in days
-        Celestial.debug += nb_days_TIMESTEP
-        print(Celestial.debug)
         nb_complete_days = round(nb_days_TIMESTEP)
         remains = nb_days_TIMESTEP - nb_complete_days #we keep the rest
         for planet in Celestial.list_bodies:
@@ -154,6 +147,9 @@ def main(duration=None):
     pygame.quit
 
 if __name__ == "__main__":
+    Celestial.set_simu_SCALE(250/ Celestial.AU) #1AU=100px
+    Celestial.set_simu_TIMESTEP(3600 *24) #1day
+    init_planets()
     main()
 
 """what to do now : 
@@ -171,4 +167,7 @@ selon gpt c'est une erreur d'arondis
 en effet si je passe de max vlaue 732 à 48 il n'y a plus d'erreur, le slider a assez de px par rapport à ce qu'il rpz
 test anecdotique : faire en sorte que la valeur qu'on met dans le slider correspond à celle qui est récupérer par le script
 
+ajouter test :
+default parameter works, circles
+using slider works, it indeed speed up simul
  """

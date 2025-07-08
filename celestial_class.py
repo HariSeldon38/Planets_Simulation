@@ -14,7 +14,6 @@ class Celestial:
     list_bodies = []
 
     #Next block is concerning the simulation
-    debug = 0
     simu_SCALE = None
     simu_TIMESTEP = None
     @classmethod
@@ -66,10 +65,13 @@ class Celestial:
 
         return force_x, force_y
 
-    def update_position(self, planets, timestep=simu_TIMESTEP):
+    def update_position(self, planets, timestep):
         """
         Update the position of a given planet
+        DO NOT use self.simu_TIMESTEP as default value it would bypass the split_step implemented in main
         """
+        if timestep == 0:
+            return None
         total_fx = total_fy = 0
         for planet in planets:
             if self == planet: #when iterating we will skip the planet for which we are calculation applied forces
@@ -95,4 +97,3 @@ class Celestial:
         cls.list_bodies = []
         cls.simu_SCALE = None
         cls.simu_TIMESTEP = None
-        cls.debug = 0
