@@ -1,5 +1,5 @@
 import pygame
-from celestial_class import Celestial
+from celestial_class import Celestial, Spaceship
 
 pygame.init()
 WIDTH, HEIGHT = 800, 800 #capitals cause constants
@@ -12,36 +12,49 @@ DARK_GREY = (80,78,81)
 JUPITER = pygame.transform.scale(pygame.image.load("jupiter.png"), (25*2,25*2))
 FONT = pygame.font.SysFont("comicsans", 16)
 BACKGND = pygame.transform.scale(pygame.image.load("background.jpg"), (WIDTH, HEIGHT))
+TRAIL = 200 #nb pts disp in trail of celestial bodies, OoM:240 is Mercury full cycle
+SHIP_TRAIL = 20
+LAUNCH_SPEED = 1e-6
 
+#Sligshot effet :
+SHIP_MASS = 1e5 #approx 5% sun's mass
+SHIP_SIZE = 4
+
+def scale(position):
+    """return position scaled to be displayed properly"""
+
+def unscale(scaled_position):
+    """return de-scaled position"""
 
 def draw(celestial_body, win, display_distance_to_sun=True):
     """
     This method is used to draw a celestial body in the window as well as its trajectory
+    If body is a Spaceship, no need to scale it, drawn directly where mouse clicks
+
+    :param: trail : nb pts disp in trail of celestial bodies, OoM:240 is Mercury full cycle
+                    (speed simul affects it)
+    :param: ship_trail : nb pts disp in trail of spaceship
     """
     simu_scale = Celestial.simu_SCALE
-    x = celestial_body.x * simu_scale + WIDTH / 2  # we need to offset cause distance to the Sun (center)
-    y = celestial_body.y * simu_scale + HEIGHT / 2  # ... and pygame origin is at top left corner    DOES IT CREATE A PB IF SUN IS MOVING ????
+    x = celestial_body.x * simu_scale + WIDTH / 2
+    y = celestial_body.y * simu_scale + HEIGHT / 2
 
-    if len(celestial_body.orbit) > 2:
+    if len(celestial_body.orbit) > 2 and celestial_body.trail:
         scaled_points = []
-        for point in celestial_body.orbit:
+        for point in celestial_body.orbit[-celestial_body.trail:]:
             x_past, y_past = point
             x_past = x_past * simu_scale + WIDTH / 2
             y_past = y_past * simu_scale + HEIGHT / 2
             scaled_points.append((x_past, y_past))
-
         pygame.draw.lines(win, celestial_body.color, False, scaled_points, 1)
+
     pygame.draw.circle(win, celestial_body.color, (x, y), celestial_body.radius)
 
-    if not celestial_body.sun and display_distance_to_sun:
-        distance_text = FONT.render(f"{round(celestial_body.distance_to_sun / Celestial.AU, 3)}au", 1, WHITE)
-        position_x_dist_text = x
-        position_y_dist_text = y
-        if position_x_dist_text < 0: position_x_dist_text = 0
-        if position_x_dist_text > WIDTH - 70: position_x_dist_text = WIDTH - 70  # would be better to not hardcore margin here ans follow Tim footstep but to tired for that today
-        if position_y_dist_text < 0: position_y_dist_text = 0
-        if position_y_dist_text > HEIGHT - 20: position_y_dist_text = HEIGHT - 20  # why -20 is needed this time ? no idea
-        win.blit(distance_text, (position_x_dist_text, position_y_dist_text))
+    if not celestial_body.sun and display_distance_to_sun and not isinstance(celestial_body, Spaceship):
+        distance_text = FONT.render(f"{round(celestial_body.distance_to_sun / Celestial.AU, 3)} AU", 1, WHITE)
+        text_x = min(max(x, 0), WIDTH - 70)
+        text_y = min(max(y, 0), HEIGHT - 20)
+        win.blit(distance_text, (text_x, text_y))
 
 class Slider:
     def __init__(self, pos: tuple, size: tuple, initial_val: float, min: float, max: float, value_unit: str):
@@ -93,6 +106,18 @@ def init_planets():
     mercury = Celestial("Mercury", 0.387*Celestial.AU, 0, 0, -47.4 * 1000, 8, DARK_GREY, 3.30e23)
     venus = Celestial("Venus", 0.723*Celestial.AU, 0, 0, -35.02 * 1000, 14, WHITE, 4.8685e24)
 
+def create_ship(loc, mouse):
+    """Basic decomposition of velocity in function of position object and position mouse
+    just draw a triangle if unclear"""
+    simu_scale = Celestial.simu_SCALE
+    x = (loc[0] - WIDTH / 2) / simu_scale #adjust scale to fit with how we position the planets
+    y = (loc[1] - HEIGHT / 2) / simu_scale
+    x_mouse = (mouse[0] - WIDTH / 2) / simu_scale #adjust scale to fit with how we position the planets
+    y_mouse = (mouse[1] - HEIGHT / 2) / simu_scale
+    x_vel = (x_mouse - x) * LAUNCH_SPEED
+    y_vel = (y_mouse - y) * LAUNCH_SPEED
+    obj = Spaceship("Spaceship", x, y, x_vel, y_vel, SHIP_SIZE, "red", SHIP_MASS)
+    return obj
 
 def main(duration=None):
     """
@@ -111,6 +136,8 @@ def main(duration=None):
 
     clock = pygame.time.Clock() #needed in to ctrl speed of the sim and not let it be the speed of our computer
     run = True
+
+    tmp_obj_pos = None
 
     if duration or duration==0:
         count = duration * FPS #nb of frame before exit
@@ -132,15 +159,29 @@ def main(duration=None):
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 run = False
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                if tmp_obj_pos:
+                    spaceship = create_ship(tmp_obj_pos, mouse_pos)
+                    tmp_obj_pos = None
+                else:
+                    tmp_obj_pos = mouse_pos
+
+        if tmp_obj_pos:
+            pygame.draw.line(WIN,"white", tmp_obj_pos, mouse_pos, 2)
+            pygame.draw.circle(WIN, "red", tmp_obj_pos, SHIP_SIZE)
 
         nb_days_TIMESTEP = Celestial.get_simu_TIMESTEP()/(3600*24) #we divide the timestep in days
         nb_complete_days = round(nb_days_TIMESTEP)
         remains = nb_days_TIMESTEP - nb_complete_days #we keep the rest
-        for planet in Celestial.list_bodies:
+        for body in Celestial.list_bodies[:]:
             for i in range(nb_complete_days): #we will update 1 day at the time
-                planet.update_position(Celestial.list_bodies, timestep=3600*24)
-            planet.update_position(Celestial.list_bodies, timestep=remains*3600*24)
-            draw(planet, WIN)
+                body.update_position(Celestial.list_bodies, timestep=3600*24)
+            body.update_position(Celestial.list_bodies, timestep=remains*3600*24)
+            draw(body, WIN)
+            off_screen = body.x < -1000 or body.x > WIDTH+1000 or body.y < -1000 or body.y > HEIGHT+1000
+            #if off_screen:
+            #Celestial.list_bodies.remove(body)
+
 
         pygame.display.update()
 
@@ -148,7 +189,9 @@ def main(duration=None):
 
 if __name__ == "__main__":
     Celestial.set_simu_SCALE(250/ Celestial.AU) #1AU=100px
-    Celestial.set_simu_TIMESTEP(3600 *24) #1day
+    Celestial.set_simu_TIMESTEP(3600*24) #1day
+    Celestial.trail = TRAIL
+    Spaceship.trail = SHIP_TRAIL
     init_planets()
     main()
 
@@ -156,9 +199,7 @@ if __name__ == "__main__":
  
 random asteroid that croses the screen (add it to planet list wich will be a class attribute and delete after too far away x or y
 
-day * 365 does not work why ?
-
-ajouter display vitesse et acceleration
+day * 365 does not work why ? fps control speed need to investigate that as well
 
 bouton pour reset view sur soleil
 
@@ -167,7 +208,21 @@ selon gpt c'est une erreur d'arondis
 en effet si je passe de max vlaue 732 à 48 il n'y a plus d'erreur, le slider a assez de px par rapport à ce qu'il rpz
 test anecdotique : faire en sorte que la valeur qu'on met dans le slider correspond à celle qui est récupérer par le script
 
-ajouter test :
+adding reverse time and delete old value of trajectory
+
+ajouter test : (GUI test)
 default parameter works, circles
 using slider works, it indeed speed up simul
+
+do not display UA for ship or simplify
+
+make ship be more sensitive about planets
+make slider not producing ships
+
+make ship disapear
+create a chrono and best score to make is stay the longer (but need to make it disapear if border of screen
+
+
+fix background
+fix middle button creating ships
  """
