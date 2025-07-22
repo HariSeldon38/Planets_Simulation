@@ -221,10 +221,11 @@ using slider works, it indeed speed up simul
 
 do not display UA for ship or simplify
 
-make ship be more sensitive about planets
 make slider not producing ships
 
 make ship disapear
+or rebound
+or merge with body
 create a chrono and best score to make is stay the longer (but need to make it disapear if border of screen
 
 
@@ -235,4 +236,11 @@ downscale all number by 1e15 in order to ease my computer
 
 lower influence of sun if close to a planet in order to make it possible to create sattelite
 
+
+best idea so far :
+    collide = merge, size and mass increase
+    objectifs : - last longer
+                - orbits around the sun (the more the better)
+                - sattelite, ultimate goat
+        dont want to create score but could find a way to check success and grant smth in return
  """
