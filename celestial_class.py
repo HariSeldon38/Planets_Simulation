@@ -32,7 +32,7 @@ class Celestial:
     def get_simu_TIMESTEP(cls):
         return cls.simu_TIMESTEP
 
-    def __init__(self, name, x, y, x_vel, y_vel, radius, color, mass):
+    def __init__(self, name, x, y, x_vel, y_vel, radius, color, mass, sun=False):
         """ TBD """
         self.name = name
         self.x = x #meters away from the Sun (center)
@@ -41,11 +41,12 @@ class Celestial:
         self.color = color
         self.mass = mass
         self.orbit = [] #keep track of all the pts the planet as traveled along
-        self.sun = False #if the planet is the Sun we will not display orbit
+        self.sun = sun #if the planet is the Sun we will not display orbit
         self.distance_to_sun = 0
         self.x_vel = x_vel #x_axis velocity in m/s
         self.y_vel = y_vel #y_axis velocity in m/s
-
+        if self.sun:
+            self.cheat_factor = 1
         self.list_bodies.append(self)
 
     def attraction(self, other):
@@ -107,7 +108,7 @@ class Celestial:
 
 class Spaceship(Celestial):
     list_bodies = []
-    cheat_factor = 1e5
+    cheat_factor = 1e21
 
     def attraction(self, other):
         """

@@ -12,8 +12,8 @@ DARK_GREY = (80,78,81)
 JUPITER = pygame.transform.scale(pygame.image.load("jupiter.png"), (25*2,25*2))
 FONT = pygame.font.SysFont("comicsans", 16)
 BACKGND = pygame.transform.scale(pygame.image.load("background.jpg"), (WIDTH, HEIGHT))
-TRAIL = 200 #nb pts disp in trail of celestial bodies, OoM:240 is Mercury full cycle
-SHIP_TRAIL = 20
+TRAIL = 120 #nb pts disp in trail of celestial bodies, OoM:240 is Mercury full cycle
+SHIP_TRAIL = 15
 LAUNCH_SPEED = 1e-6
 
 #Sligshot effet :
@@ -50,7 +50,7 @@ def draw(celestial_body, win, display_distance_to_sun=True):
 
     pygame.draw.circle(win, celestial_body.color, (x, y), celestial_body.radius)
 
-    if not celestial_body.sun and display_distance_to_sun and not isinstance(celestial_body, Spaceship):
+    if not celestial_body.sun and display_distance_to_sun:
         distance_text = FONT.render(f"{round(celestial_body.distance_to_sun / Celestial.AU, 3)} AU", 1, WHITE)
         text_x = min(max(x, 0), WIDTH - 70)
         text_y = min(max(y, 0), HEIGHT - 20)
@@ -99,8 +99,7 @@ class Slider:
         win.blit(slider_text, (self.right_pos+5, self.pos[1]))
 
 def init_planets():
-    sun = Celestial("Sun", 0, 0, 0, 0, 30, YELLOW, 1.98892e30) #radius is randomly picked, mass is accurate and in kg
-    sun.sun = True
+    sun = Celestial("Sun", 0, 0, 0, 0, 30, YELLOW, 1.98892e30, sun=True) #radius is randomly picked, mass is accurate and in kg
     earth = Celestial("Earth", -1 * Celestial.AU, 0,  0, 29.783 *1000, 16, BLUE, 5.9742e24)
     mars = Celestial("Mars", -1.524 * Celestial.AU, 0, 0, 24.077 * 1000, 12, RED, 6.39e23)
     mercury = Celestial("Mercury", 0.387*Celestial.AU, 0, 0, -47.4 * 1000, 8, DARK_GREY, 3.30e23)
@@ -177,12 +176,12 @@ def main(duration=None):
             for i in range(nb_complete_days): #we will update 1 day at the time
                 body.update_position(Celestial.list_bodies, timestep=3600*24)
             body.update_position(Celestial.list_bodies, timestep=remains*3600*24)
-            draw(body, WIN)
+            draw(body, WIN, display_distance_to_sun=False)
         for ship in Spaceship.list_bodies[:]:
             for i in range(nb_complete_days):  # we will update 1 day at the time
                 ship.update_position(Spaceship.list_bodies + Celestial.list_bodies, timestep=3600 * 24)
             ship.update_position(Spaceship.list_bodies, timestep=remains * 3600 * 24)
-            draw(ship, WIN)
+            draw(ship, WIN, display_distance_to_sun=False)
 
             #off_screen = body.x < -1000 or body.x > WIDTH+1000 or body.y < -1000 or body.y > HEIGHT+1000
             #if off_screen:
@@ -231,4 +230,9 @@ create a chrono and best score to make is stay the longer (but need to make it d
 
 fix background
 fix middle button creating ships
+
+downscale all number by 1e15 in order to ease my computer
+
+lower influence of sun if close to a planet in order to make it possible to create sattelite
+
  """
