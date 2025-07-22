@@ -2,7 +2,7 @@ import pygame
 from celestial_class import Celestial, Spaceship
 
 pygame.init()
-WIDTH, HEIGHT = 800, 800 #capitals cause constants
+WIDTH, HEIGHT = 1000, 1000 #capitals cause constants
 FPS = 30 #speed of simu depend s also on fps... not good
 WHITE = (255,255,255) #RGB values
 YELLOW = (255,255,0)
@@ -178,7 +178,13 @@ def main(duration=None):
                 body.update_position(Celestial.list_bodies, timestep=3600*24)
             body.update_position(Celestial.list_bodies, timestep=remains*3600*24)
             draw(body, WIN)
-            off_screen = body.x < -1000 or body.x > WIDTH+1000 or body.y < -1000 or body.y > HEIGHT+1000
+        for ship in Spaceship.list_bodies[:]:
+            for i in range(nb_complete_days):  # we will update 1 day at the time
+                ship.update_position(Spaceship.list_bodies + Celestial.list_bodies, timestep=3600 * 24)
+            ship.update_position(Spaceship.list_bodies, timestep=remains * 3600 * 24)
+            draw(ship, WIN)
+
+            #off_screen = body.x < -1000 or body.x > WIDTH+1000 or body.y < -1000 or body.y > HEIGHT+1000
             #if off_screen:
             #Celestial.list_bodies.remove(body)
 

@@ -1,4 +1,4 @@
-import math
+import numpy
 
 class Celestial:
     """
@@ -58,15 +58,15 @@ class Celestial:
 
         distance_x = other.x - self.x
         distance_y = other.y - self.y
-        distance = math.sqrt(distance_x**2 + distance_y**2)
+        distance = numpy.sqrt(distance_x**2 + distance_y**2)
 
         if other.sun:
             self.distance_to_sun = distance
 
         force = self.G * self.mass * other.mass / (distance**2 + self.epsilon)
-        theta = math.atan2(distance_y, distance_x)
-        force_x = math.cos(theta) * force
-        force_y = math.sin(theta) * force
+        theta = numpy.atan2(distance_y, distance_x)
+        force_x = numpy.cos(theta) * force
+        force_y = numpy.sin(theta) * force
 
         return force_x, force_y
 
@@ -105,7 +105,42 @@ class Celestial:
         cls.trail = None
 
 class Spaceship(Celestial):
-    """for now list_bodies is the one define in Celestial,
-    if define list_bodies in this class we will have 2 differents lists and it's not what we want"""
-    pass
+    list_bodies = []
 
+    def attraction(self, other):
+        """
+        This method returns the force of attraction undergone by a Spaceship object by another body (in Newton)
+        returns : force_x : x-axis force
+                  force_y : y-axis force
+
+                  the gravitational force is softened by a epsilon coef for it not to diverge
+
+                  the gravitational force is increased if the other body is not the sun
+                        (because it funnier if the ship feels the attraction not only caused by the sun)
+                        and due to it's insignificant mass it is not possible with Celestial.attraction method)
+        """
+        MAX = 50000 #max value that can output this function to avoid ships to be shoot into space
+
+        distance_x = other.x - self.x
+        distance_y = other.y - self.y
+        distance = numpy.sqrt(distance_x**2 + distance_y**2)
+
+        if other.sun:
+            self.distance_to_sun = distance
+
+            force = self.G * self.mass * other.mass / (distance**2 + self.epsilon)
+            theta = numpy.atan2(distance_y, distance_x)
+            force_x = numpy.cos(theta) * force
+            force_y = numpy.sin(theta) * force
+        else:
+            force = self.G * self.mass * other.mass * 1e5 / (distance ** 2 + self.epsilon)
+            theta = numpy.atan2(distance_y, distance_x)
+            force_x = numpy.cos(theta) * force
+            force_y = numpy.sin(theta) * force
+
+        if abs(force_x) > MAX:
+            force_x = numpy.sign(force_x) * MAX
+        if abs(force_y) > MAX:
+            force_y = numpy.sign(force_y) * MAX
+
+        return force_x, force_y
