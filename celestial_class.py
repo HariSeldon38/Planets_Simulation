@@ -32,7 +32,7 @@ class Celestial:
     def get_simu_TIMESTEP(cls):
         return cls.simu_TIMESTEP
 
-    def __init__(self, name, x, y, x_vel, y_vel, radius, color, mass, sun=False):
+    def __init__(self, name, x, y, x_vel, y_vel, radius, color, mass, perceived_mass=None, sun=False):
         """ TBD """
         self.name = name
         self.x = x #meters away from the Sun (center)
@@ -40,13 +40,17 @@ class Celestial:
         self.radius = radius
         self.color = color
         self.mass = mass
+        if not perceived_mass: #mass that will feel the spaceship in order to allow satellites
+            self.perceived_mass = mass
+        else:
+            self.perceived_mass = perceived_mass
         self.orbit = [] #keep track of all the pts the planet as traveled along
         self.sun = sun #if the planet is the Sun we will not display orbit
         self.distance_to_sun = 0
         self.x_vel = x_vel #x_axis velocity in m/s
         self.y_vel = y_vel #y_axis velocity in m/s
         if self.sun:
-            self.cheat_factor = 1
+            self.cheat_factor = 0.000000000000001                                  #1 should be resetted after test
         self.list_bodies.append(self)
 
     def attraction(self, other):
@@ -122,7 +126,6 @@ class Spaceship(Celestial):
                         (because it funnier if the ship feels the attraction not only caused by the sun)
                         and due to it's insignificant mass it is not possible with Celestial.attraction method)
         """
-        MAX = 50000 #max value that can output this function to avoid ships to be shoot into space
 
         distance_x = other.x - self.x
         distance_y = other.y - self.y
@@ -131,14 +134,9 @@ class Spaceship(Celestial):
         if other.sun:
             self.distance_to_sun = distance
 
-        force = self.G * self.mass * other.mass * other.cheat_factor / (distance ** 2 + self.epsilon)
+        force = self.G * self.mass * other.perceived_mass / (distance ** 2 + self.epsilon)
         theta = numpy.atan2(distance_y, distance_x)
         force_x = numpy.cos(theta) * force
         force_y = numpy.sin(theta) * force
-
-        if abs(force_x) > MAX:
-            force_x = numpy.sign(force_x) * MAX
-        if abs(force_y) > MAX:
-            force_y = numpy.sign(force_y) * MAX
 
         return force_x, force_y

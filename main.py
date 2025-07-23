@@ -1,4 +1,5 @@
 import pygame
+import math
 from celestial_class import Celestial, Spaceship
 
 pygame.init()
@@ -14,17 +15,22 @@ FONT = pygame.font.SysFont("comicsans", 16)
 BACKGND = pygame.transform.scale(pygame.image.load("background.jpg"), (WIDTH, HEIGHT))
 TRAIL = 120 #nb pts disp in trail of celestial bodies, OoM:240 is Mercury full cycle
 SHIP_TRAIL = 15
-LAUNCH_SPEED = 1e-6
+LAUNCH_SPEED = 1.7e-6
 
 #Sligshot effet :
 SHIP_MASS = 1e5 #approx 5% sun's mass
 SHIP_SIZE = 4
 
-def scale(position):
+def scale(position, width, height, simu_scale):
     """return position scaled to be displayed properly"""
-
-def unscale(scaled_position):
+    x = position[0] * simu_scale + width / 2
+    y = position[1] * simu_scale + height / 2
+    return x,y
+def unscale(scaled_position, width, height, simu_scale):
     """return de-scaled position"""
+    x = (scaled_position[0] - WIDTH / 2) / simu_scale
+    y = (scaled_position[1] - HEIGHT / 2) / simu_scale
+    return x, y
 
 def draw(celestial_body, win, display_distance_to_sun=True):
     """
@@ -35,16 +41,13 @@ def draw(celestial_body, win, display_distance_to_sun=True):
                     (speed simul affects it)
     :param: ship_trail : nb pts disp in trail of spaceship
     """
-    simu_scale = Celestial.simu_SCALE
-    x = celestial_body.x * simu_scale + WIDTH / 2
-    y = celestial_body.y * simu_scale + HEIGHT / 2
+    position = (celestial_body.x, celestial_body.y)
+    x,y = scale(position, WIDTH, HEIGHT, Celestial.simu_SCALE)
 
     if len(celestial_body.orbit) > 2 and celestial_body.trail:
         scaled_points = []
         for point in celestial_body.orbit[-celestial_body.trail:]:
-            x_past, y_past = point
-            x_past = x_past * simu_scale + WIDTH / 2
-            y_past = y_past * simu_scale + HEIGHT / 2
+            x_past, y_past = scale(point, WIDTH, HEIGHT, Celestial.simu_SCALE)
             scaled_points.append((x_past, y_past))
         pygame.draw.lines(win, celestial_body.color, False, scaled_points, 1)
 
@@ -100,19 +103,18 @@ class Slider:
 
 def init_planets():
     sun = Celestial("Sun", 0, 0, 0, 0, 30, YELLOW, 1.98892e30, sun=True) #radius is randomly picked, mass is accurate and in kg
-    earth = Celestial("Earth", -1 * Celestial.AU, 0,  0, 29.783 *1000, 16, BLUE, 5.9742e24)
-    mars = Celestial("Mars", -1.524 * Celestial.AU, 0, 0, 24.077 * 1000, 12, RED, 6.39e23)
-    mercury = Celestial("Mercury", 0.387*Celestial.AU, 0, 0, -47.4 * 1000, 8, DARK_GREY, 3.30e23)
-    venus = Celestial("Venus", 0.723*Celestial.AU, 0, 0, -35.02 * 1000, 14, WHITE, 4.8685e24)
+    earth = Celestial("Earth", -1 * Celestial.AU, 0,  0, 29.783 *1000, 16, BLUE, 5.9742e24, 5.9742e29)
+    mars = Celestial("Mars", -1.524 * Celestial.AU, 0, 0, 24.077 * 1000, 12, RED, 6.39e23, 1e29)
+    mercury = Celestial("Mercury", 0.387*Celestial.AU, 0, 0, -47.4 * 1000, 8, DARK_GREY, 3.30e23, 1e25)
+    venus = Celestial("Venus", 0.723*Celestial.AU, 0, 0, -35.02 * 1000, 14, WHITE, 4.8685e24, 5e26)
+    moon = Spaceship("Moon", -1.1 * Celestial.AU, 0, 0, 84 *1000, 3, WHITE, 7.346e22)
 
 def create_ship(loc, mouse):
     """Basic decomposition of velocity in function of position object and position mouse
     just draw a triangle if unclear"""
-    simu_scale = Celestial.simu_SCALE
-    x = (loc[0] - WIDTH / 2) / simu_scale #adjust scale to fit with how we position the planets
-    y = (loc[1] - HEIGHT / 2) / simu_scale
-    x_mouse = (mouse[0] - WIDTH / 2) / simu_scale #adjust scale to fit with how we position the planets
-    y_mouse = (mouse[1] - HEIGHT / 2) / simu_scale
+    x, y = unscale(loc, WIDTH, HEIGHT, Celestial.simu_SCALE) #adjust scale to fit with how we position the planets
+    x_mouse, y_mouse = unscale(mouse, WIDTH, HEIGHT, Celestial.simu_SCALE)
+
     x_vel = (x_mouse - x) * LAUNCH_SPEED
     y_vel = (y_mouse - y) * LAUNCH_SPEED
     obj = Spaceship("Spaceship", x, y, x_vel, y_vel, SHIP_SIZE, "red", SHIP_MASS)
@@ -131,7 +133,7 @@ def main(duration=None):
     """
     WIN = pygame.display.set_mode((WIDTH, HEIGHT))  # this is our window (a pygame surface)
     pygame.display.set_caption("Planet Simulation")
-    simu_TIMESTEP_slider = Slider((40, 40), (600, 15), Celestial.simu_TIMESTEP/3600, 1, 600, "hour/sec")
+    simu_TIMESTEP_slider = Slider((40, 40), (600, 15), Celestial.simu_TIMESTEP/3600, 1, 100, "hour/sec")
 
     clock = pygame.time.Clock() #needed in to ctrl speed of the sim and not let it be the speed of our computer
     run = True
@@ -158,7 +160,7 @@ def main(duration=None):
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 run = False
-            if event.type == pygame.MOUSEBUTTONDOWN:
+            if event.type == pygame.MOUSEBUTTONDOWN and not simu_TIMESTEP_slider.container_rect.collidepoint(mouse_pos):
                 if tmp_obj_pos:
                     spaceship = create_ship(tmp_obj_pos, mouse_pos)
                     tmp_obj_pos = None
@@ -169,23 +171,41 @@ def main(duration=None):
             pygame.draw.line(WIN,"white", tmp_obj_pos, mouse_pos, 2)
             pygame.draw.circle(WIN, "red", tmp_obj_pos, SHIP_SIZE)
 
-        nb_days_TIMESTEP = Celestial.get_simu_TIMESTEP()/(3600*24) #we divide the timestep in days
+        discretization_TIMESTEP = 3600*6 #we divide the timestep in quarter days
+        nb_days_TIMESTEP = Celestial.get_simu_TIMESTEP()/(discretization_TIMESTEP)
         nb_complete_days = round(nb_days_TIMESTEP)
         remains = nb_days_TIMESTEP - nb_complete_days #we keep the rest
-        for body in Celestial.list_bodies[:]:
-            for i in range(nb_complete_days): #we will update 1 day at the time
-                body.update_position(Celestial.list_bodies, timestep=3600*24)
-            body.update_position(Celestial.list_bodies, timestep=remains*3600*24)
-            draw(body, WIN, display_distance_to_sun=False)
         for ship in Spaceship.list_bodies[:]:
-            for i in range(nb_complete_days):  # we will update 1 day at the time
-                ship.update_position(Spaceship.list_bodies + Celestial.list_bodies, timestep=3600 * 24)
-            ship.update_position(Spaceship.list_bodies, timestep=remains * 3600 * 24)
+            for i in range(nb_complete_days):  # we will update 1 quarter day at the time
+                ship.update_position(Spaceship.list_bodies + Celestial.list_bodies, timestep=discretization_TIMESTEP)
+            ship.update_position(Spaceship.list_bodies + Celestial.list_bodies, timestep=remains*discretization_TIMESTEP)
             draw(ship, WIN, display_distance_to_sun=False)
 
-            #off_screen = body.x < -1000 or body.x > WIDTH+1000 or body.y < -1000 or body.y > HEIGHT+1000
-            #if off_screen:
-            #Celestial.list_bodies.remove(body)
+            #Where we make ships disapear
+            x, y = scale((ship.x,ship.y), WIDTH, HEIGHT, Celestial.simu_SCALE)
+            tol = 1000 #how much pixels afar from screen to consider lost
+            off_screen = x < -tol or x > WIDTH+tol or y < -tol or y > HEIGHT+tol
+            if off_screen:
+                Spaceship.list_bodies.remove(ship)
+                print("A ship drifts eternally through space, say goodbye...")
+                print(f"there are {len(Spaceship.list_bodies)-1} ships left.")
+            for planet in Celestial.list_bodies: #could improve perf to scale it once, after update pos
+                x_planet, y_planet = scale((planet.x,planet.y),WIDTH,HEIGHT,Celestial.simu_SCALE)
+                collided = math.sqrt((x-x_planet)**2 + (y-y_planet)**2) <= planet.radius
+                if collided:
+                    Spaceship.list_bodies.remove(ship)
+                    planet.mass += 5e26
+                    planet.radius += 0.1
+                    print(f"A ship has merged with {planet.name}. Don't feed it too much !")
+                    print(f"there are {len(Spaceship.list_bodies) - 1} ships left.")
+
+
+
+        for body in Celestial.list_bodies[:]:
+            for i in range(nb_complete_days):
+                body.update_position(Celestial.list_bodies, timestep=discretization_TIMESTEP)
+            body.update_position(Celestial.list_bodies, timestep=remains*discretization_TIMESTEP)
+            draw(body, WIN, display_distance_to_sun=False)
 
 
         pygame.display.update()
@@ -194,7 +214,7 @@ def main(duration=None):
 
 if __name__ == "__main__":
     Celestial.set_simu_SCALE(250/ Celestial.AU) #1AU=100px
-    Celestial.set_simu_TIMESTEP(3600*24) #1day
+    Celestial.set_simu_TIMESTEP(3600*10) #10 hours
     Celestial.trail = TRAIL
     Spaceship.trail = SHIP_TRAIL
     init_planets()
@@ -219,10 +239,6 @@ ajouter test : (GUI test)
 default parameter works, circles
 using slider works, it indeed speed up simul
 
-do not display UA for ship or simplify
-
-make slider not producing ships
-
 make ship disapear
 or rebound
 or merge with body
@@ -230,17 +246,22 @@ create a chrono and best score to make is stay the longer (but need to make it d
 
 
 fix background
-fix middle button creating ships
+fix middle button creating ships : NO, great feature
 
 downscale all number by 1e15 in order to ease my computer
 
 lower influence of sun if close to a planet in order to make it possible to create sattelite
 
+RST button
 
 best idea so far :
-    collide = merge, size and mass increase
     objectifs : - last longer
                 - orbits around the sun (the more the better)
                 - sattelite, ultimate goat
         dont want to create score but could find a way to check success and grant smth in return
+        
+bug : when moving slider too fast simu diverges
+
+
+what happen when planet are colliding ? title screen ? credit ? easter egg ? 
  """
