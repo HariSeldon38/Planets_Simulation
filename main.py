@@ -101,12 +101,12 @@ class Slider:
         win.blit(slider_text, (self.right_pos+5, self.pos[1]))
 
 def init_planets():
-    sun = Celestial("Sun", 0, 0, 0, 0, 30, YELLOW, 1.98892e30, sun=True) #radius is randomly picked, mass is accurate and in kg
-    earth = Celestial("Earth", -1 * Celestial.AU, 0,  0, 29.783 *1000, 16, BLUE, 5.9742e24, 5.9742e29)
-    mars = Celestial("Mars", -1.524 * Celestial.AU, 0, 0, 24.077 * 1000, 12, RED, 6.39e23, 1e29)
-    mercury = Celestial("Mercury", 0.387*Celestial.AU, 0, 0, -47.4 * 1000, 8, DARK_GREY, 3.30e23, 1e25)
-    venus = Celestial("Venus", 0.723*Celestial.AU, 0, 0, -35.02 * 1000, 14, WHITE, 4.8685e24, 5e26)
-    moon = Moon("Moon", -1.1 * Celestial.AU, 0, 0, 84 *1000, 3, WHITE, 7.346e22)
+    sun = Celestial("Sun", 0, 0, 0, 0, 30, YELLOW, 1.32746090e+20, sun=True) #radius is randomly picked, mass is accurate and in kg
+    earth = Celestial("Earth", -1 * Celestial.AU, 0,  0, 29.783 *1000, 16, BLUE, 3.98734836e+14, 3.98734836e+19)
+    mars = Celestial("Mars", -1.524 * Celestial.AU, 0, 0, 24.077 * 1000, 12, RED, 4.26486492e+13, 6.67428000e+18)
+    mercury = Celestial("Mercury", 0.387*Celestial.AU, 0, 0, -47.4 * 1000, 8, DARK_GREY, 2.20251240e+13, 6.67428000e+14)
+    venus = Celestial("Venus", 0.723*Celestial.AU, 0, 0, -35.02 * 1000, 14, WHITE, 3.24937322e+14, 3.33714000e+16)
+    moon = Moon("Moon", -1.1 * Celestial.AU, 0, 0, 84 *1000, 3, WHITE, 4.90292609e+12)
 
 def create_ship(loc, mouse):
     """Basic decomposition of velocity in function of position object and position mouse
@@ -137,7 +137,7 @@ def remove_lost_ship(ship):
         collided = math.sqrt((x-x_planet)**2 + (y-y_planet)**2) <= planet.radius
         if collided:
             Spaceship.list_bodies.remove(ship)
-            planet.mass += 5e26
+            planet.mass += 3.3e16
             planet.radius += 0.1
             print(f"A ship has merged with {planet.name}. Don't feed it too much !")
             print(f"there are {len(Spaceship.list_bodies)} ships left.")

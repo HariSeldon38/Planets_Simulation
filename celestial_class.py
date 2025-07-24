@@ -10,7 +10,6 @@ class Celestial:
     and need to be set in order to use update_position.
     """
     AU = 1.495979e11 #Astronomical Unit in meters (distance Sun-Earth)
-    G = 6.67428e-11 #Gravitationnal cst
     epsilon = 3e5 #avoid divergence of force for low distance
     list_bodies = []
 
@@ -66,7 +65,7 @@ class Celestial:
         if other.sun:
             self.distance_to_sun = distance
 
-        force = self.G * self.mass * other.mass / (distance**2 + self.epsilon)
+        force = self.mass * other.mass / (distance**2 + self.epsilon)
         theta = numpy.atan2(distance_y, distance_x)
         force_x = numpy.cos(theta) * force
         force_y = numpy.sin(theta) * force
@@ -130,7 +129,7 @@ class Spaceship(Celestial):
         if other.sun:
             self.distance_to_sun = distance
 
-        force = self.G * self.mass * other.perceived_mass / (distance ** 2 + self.epsilon)
+        force = self.mass * other.perceived_mass / (distance ** 2 + self.epsilon)
         theta = numpy.atan2(distance_y, distance_x)
         force_x = numpy.cos(theta) * force
         force_y = numpy.sin(theta) * force
