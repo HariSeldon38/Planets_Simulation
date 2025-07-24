@@ -12,7 +12,6 @@ class Celestial:
     AU = 1.495979e11 #Astronomical Unit in meters (distance Sun-Earth)
     G = 6.67428e-11 #Gravitationnal cst
     epsilon = 3e5 #avoid divergence of force for low distance
-    cheat_factor = 1e5 #used by Spaceship.attraction to feel more attraction from planets
     list_bodies = []
 
     #Next block is concerning the simulation
@@ -49,8 +48,6 @@ class Celestial:
         self.distance_to_sun = 0
         self.x_vel = x_vel #x_axis velocity in m/s
         self.y_vel = y_vel #y_axis velocity in m/s
-        if self.sun:
-            self.cheat_factor = 0.000000000000001                                  #1 should be resetted after test
         self.list_bodies.append(self)
 
     def attraction(self, other):
@@ -112,7 +109,6 @@ class Celestial:
 
 class Spaceship(Celestial):
     list_bodies = []
-    cheat_factor = 1e21
 
     def attraction(self, other):
         """
@@ -140,3 +136,6 @@ class Spaceship(Celestial):
         force_y = numpy.sin(theta) * force
 
         return force_x, force_y
+
+class Moon(Spaceship):
+    list_bodies = []

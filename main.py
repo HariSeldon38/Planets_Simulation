@@ -1,9 +1,9 @@
 import pygame
 import math
-from celestial_class import Celestial, Spaceship
+from celestial_class import Celestial, Spaceship, Moon
 
 pygame.init()
-WIDTH, HEIGHT = 1000, 1000 #capitals cause constants
+WIDTH, HEIGHT = 900, 900 #capitals cause constants
 FPS = 30 #speed of simu depend s also on fps... not good
 WHITE = (255,255,255) #RGB values
 YELLOW = (255,255,0)
@@ -16,7 +16,6 @@ BACKGND = pygame.transform.scale(pygame.image.load("background.jpg"), (WIDTH, HE
 TRAIL = 120 #nb pts disp in trail of celestial bodies, OoM:240 is Mercury full cycle
 SHIP_TRAIL = 15
 LAUNCH_SPEED = 1.7e-6
-
 #Sligshot effet :
 SHIP_MASS = 1e5 #approx 5% sun's mass
 SHIP_SIZE = 4
@@ -107,7 +106,7 @@ def init_planets():
     mars = Celestial("Mars", -1.524 * Celestial.AU, 0, 0, 24.077 * 1000, 12, RED, 6.39e23, 1e29)
     mercury = Celestial("Mercury", 0.387*Celestial.AU, 0, 0, -47.4 * 1000, 8, DARK_GREY, 3.30e23, 1e25)
     venus = Celestial("Venus", 0.723*Celestial.AU, 0, 0, -35.02 * 1000, 14, WHITE, 4.8685e24, 5e26)
-    moon = Spaceship("Moon", -1.1 * Celestial.AU, 0, 0, 84 *1000, 3, WHITE, 7.346e22)
+    moon = Moon("Moon", -1.1 * Celestial.AU, 0, 0, 84 *1000, 3, WHITE, 7.346e22)
 
 def create_ship(loc, mouse):
     """Basic decomposition of velocity in function of position object and position mouse
@@ -120,16 +119,34 @@ def create_ship(loc, mouse):
     obj = Spaceship("Spaceship", x, y, x_vel, y_vel, SHIP_SIZE, "red", SHIP_MASS)
     return obj
 
+def remove_lost_ship(ship):
+    """Check if ship has gone far offscreen or has collided with a planet and remove it if so."""
+
+    #CHECK IF GO OFFSCREEN AND REMOVE
+    tol = 1000 #how much pixels afar from screen to consider lost
+    x, y = scale((ship.x,ship.y), WIDTH, HEIGHT, Celestial.simu_SCALE)
+    off_screen = x < -tol or x > WIDTH+tol or y < -tol or y > HEIGHT+tol
+    if off_screen:
+        Spaceship.list_bodies.remove(ship)
+        print("A ship drifts eternally through space, say goodbye...")
+        print(f"there are {len(Spaceship.list_bodies)} ships left.")
+
+    #CHECK IF COLLIDE AND REMOVE
+    for planet in Celestial.list_bodies: #could improve perf to scale it once, after update pos
+        x_planet, y_planet = scale((planet.x,planet.y),WIDTH,HEIGHT,Celestial.simu_SCALE)
+        collided = math.sqrt((x-x_planet)**2 + (y-y_planet)**2) <= planet.radius
+        if collided:
+            Spaceship.list_bodies.remove(ship)
+            planet.mass += 5e26
+            planet.radius += 0.1
+            print(f"A ship has merged with {planet.name}. Don't feed it too much !")
+            print(f"there are {len(Spaceship.list_bodies)} ships left.")
+
 def main(duration=None):
     """
-    This function create an infinite loop
-    this is used to keep track of the events that are occuring
-    here the only event is closing the window
-
     param: duration: in sec, duration before the simulation is closed
                      if None, simu ends only if manually closed
                      if 0, simu will not run
-
     """
     WIN = pygame.display.set_mode((WIDTH, HEIGHT))  # this is our window (a pygame surface)
     pygame.display.set_caption("Planet Simulation")
@@ -166,6 +183,13 @@ def main(duration=None):
                     tmp_obj_pos = None
                 else:
                     tmp_obj_pos = mouse_pos
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_r:
+                    Spaceship.reset_class()
+                    Spaceship.set_simu_SCALE(250/ Celestial.AU) #1AU=100px
+                    Spaceship.set_simu_TIMESTEP(3600*10) #10 hours
+                    Spaceship.trail = SHIP_TRAIL
+                    print("ALL THE SHIP ARE GONE \n")
 
         if tmp_obj_pos:
             pygame.draw.line(WIN,"white", tmp_obj_pos, mouse_pos, 2)
@@ -180,28 +204,8 @@ def main(duration=None):
                 ship.update_position(Spaceship.list_bodies + Celestial.list_bodies, timestep=discretization_TIMESTEP)
             ship.update_position(Spaceship.list_bodies + Celestial.list_bodies, timestep=remains*discretization_TIMESTEP)
             draw(ship, WIN, display_distance_to_sun=False)
-
-            #Where we make ships disapear
-            x, y = scale((ship.x,ship.y), WIDTH, HEIGHT, Celestial.simu_SCALE)
-            tol = 1000 #how much pixels afar from screen to consider lost
-            off_screen = x < -tol or x > WIDTH+tol or y < -tol or y > HEIGHT+tol
-            if off_screen:
-                Spaceship.list_bodies.remove(ship)
-                print("A ship drifts eternally through space, say goodbye...")
-                print(f"there are {len(Spaceship.list_bodies)-1} ships left.")
-            for planet in Celestial.list_bodies: #could improve perf to scale it once, after update pos
-                x_planet, y_planet = scale((planet.x,planet.y),WIDTH,HEIGHT,Celestial.simu_SCALE)
-                collided = math.sqrt((x-x_planet)**2 + (y-y_planet)**2) <= planet.radius
-                if collided:
-                    Spaceship.list_bodies.remove(ship)
-                    planet.mass += 5e26
-                    planet.radius += 0.1
-                    print(f"A ship has merged with {planet.name}. Don't feed it too much !")
-                    print(f"there are {len(Spaceship.list_bodies) - 1} ships left.")
-
-
-
-        for body in Celestial.list_bodies[:]:
+            remove_lost_ship(ship)
+        for body in Celestial.list_bodies + Moon.list_bodies:
             for i in range(nb_complete_days):
                 body.update_position(Celestial.list_bodies, timestep=discretization_TIMESTEP)
             body.update_position(Celestial.list_bodies, timestep=remains*discretization_TIMESTEP)
@@ -223,6 +227,9 @@ if __name__ == "__main__":
 """what to do now : 
  
 random asteroid that croses the screen (add it to planet list wich will be a class attribute and delete after too far away x or y
+class Asteroid(Spaceship):
+    pass
+function that randomly create asteroid with random params called every frames
 
 day * 365 does not work why ? fps control speed need to investigate that as well
 
@@ -251,8 +258,6 @@ fix middle button creating ships : NO, great feature
 downscale all number by 1e15 in order to ease my computer
 
 lower influence of sun if close to a planet in order to make it possible to create sattelite
-
-RST button
 
 best idea so far :
     objectifs : - last longer
