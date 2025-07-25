@@ -3,6 +3,26 @@ import math
 from celestial_class import Celestial, Spaceship, Moon
 
 
+
+pygame.init()
+WIDTH, HEIGHT = 900, 900 #capitals cause constants
+FPS = 30 #speed of simu depend s also on fps... not good
+WHITE = (255,255,255) #RGB values
+YELLOW = (255,255,0)
+BLUE = (100,149,237)
+RED = (188,39,50)
+DARK_GREY = (80,78,81)
+JUPITER = pygame.transform.scale(pygame.image.load("jupiter.png"), (25*2,25*2))
+FONT = pygame.font.SysFont("comicsans", 16)
+BACKGND = pygame.transform.scale(pygame.image.load("background.jpg"), (WIDTH, HEIGHT))
+TRAIL = 120 #nb pts disp in trail of celestial bodies, OoM:240 is Mercury full cycle
+SHIP_TRAIL = 15
+LAUNCH_SPEED = 1.7e-6
+#Sligshot effet :
+SHIP_MASS = 1e5 #approx 5% sun's mass
+SHIP_SIZE = 4
+CONTROL_RATE = 1000 #how much we'll ctrl the last ship with zqsd
+
 def matches_pattern(lst):
     """
     return True if list match ANYHOW the pattern
@@ -23,25 +43,6 @@ def matches_pattern(lst):
         if match:
             return True
     return False
-
-pygame.init()
-WIDTH, HEIGHT = 900, 900 #capitals cause constants
-FPS = 30 #speed of simu depend s also on fps... not good
-WHITE = (255,255,255) #RGB values
-YELLOW = (255,255,0)
-BLUE = (100,149,237)
-RED = (188,39,50)
-DARK_GREY = (80,78,81)
-JUPITER = pygame.transform.scale(pygame.image.load("jupiter.png"), (25*2,25*2))
-FONT = pygame.font.SysFont("comicsans", 16)
-BACKGND = pygame.transform.scale(pygame.image.load("background.jpg"), (WIDTH, HEIGHT))
-TRAIL = 120 #nb pts disp in trail of celestial bodies, OoM:240 is Mercury full cycle
-SHIP_TRAIL = 15
-LAUNCH_SPEED = 1.7e-6
-#Sligshot effet :
-SHIP_MASS = 1e5 #approx 5% sun's mass
-SHIP_SIZE = 4
-CONTROL_RATE = 1000 #how much we'll ctrl the last ship with zqsd
 
 def scale(position, width, height, simu_scale):
     """return position scaled to be displayed properly"""
@@ -132,9 +133,9 @@ class Slider:
 def init_planets():
     sun = Celestial("Sun", 0, 0, 0, 0, 30, YELLOW, 1.32746090e+20, sun=True) #radius is randomly picked, mass is accurate and in kg
     earth = Celestial("Earth", -1 * Celestial.AU, 0,  0, 29.783 *1000, 16, BLUE, 3.98734836e+14, 3.98734836e+19)
-    mars = Celestial("Mars", -1.524 * Celestial.AU, 0, 0, 24.077 * 1000, 12, RED, 4.26486492e+13, 6.67428000e+18)
+    mars = Celestial("Mars", -1.524 * Celestial.AU, 0, 0, 24.077 * 1000, 14, RED, 4.26486492e+13, 6.67428000e+18)
     mercury = Celestial("Mercury", 0.387*Celestial.AU, 0, 0, -47.4 * 1000, 8, DARK_GREY, 2.20251240e+13, 6.67428000e+14)
-    venus = Celestial("Venus", 0.723*Celestial.AU, 0, 0, -35.02 * 1000, 14, WHITE, 3.24937322e+14, 3.33714000e+16)
+    venus = Celestial("Venus", 0.723*Celestial.AU, 0, 0, -35.02 * 1000, 11, WHITE, 3.24937322e+14, 3.33714000e+16)
     moon = Moon("Moon", -1.1 * Celestial.AU, 0, 0, 84 *1000, 3, WHITE, 4.90292609e+12)
 
 def create_ship(loc, mouse):
@@ -152,7 +153,7 @@ def remove_lost_ship(ship):
     """Check if ship has gone far offscreen or has collided with a planet and remove it if so."""
 
     #CHECK IF GO OFFSCREEN AND REMOVE
-    tol = 1000 #how much pixels afar from screen to consider lost
+    tol = 0 #how much pixels afar from screen to consider lost
     x, y = scale((ship.x,ship.y), WIDTH, HEIGHT, Celestial.simu_SCALE)
     off_screen = x < -tol or x > WIDTH+tol or y < -tol or y > HEIGHT+tol
     if off_screen:
@@ -179,7 +180,7 @@ def main(duration=None):
     """
     WIN = pygame.display.set_mode((WIDTH, HEIGHT))  # this is our window (a pygame surface)
     pygame.display.set_caption("Planet Simulation")
-    simu_TIMESTEP_slider = Slider((40, 40), (600, 15), Celestial.simu_TIMESTEP/3600, 1, 100, "hour/sec")
+    simu_TIMESTEP_slider = Slider((40, 40), (450, 15), Celestial.simu_TIMESTEP/3600, 1, 100, "hour/sec")
 
     clock = pygame.time.Clock() #needed in to ctrl speed of the sim and not let it be the speed of our computer
     run = True
@@ -239,6 +240,8 @@ def main(duration=None):
         nb_days_TIMESTEP = Celestial.get_simu_TIMESTEP()/(discretization_TIMESTEP)
         nb_complete_days = round(nb_days_TIMESTEP)
         remains = nb_days_TIMESTEP - nb_complete_days #we keep the rest
+
+        orbit_count = 0
         for ship in Spaceship.list_bodies[:]:
             for i in range(nb_complete_days):  # we will update 1 quarter day at the time
                 ship.update_position(Spaceship.list_bodies + Celestial.list_bodies, timestep=discretization_TIMESTEP)
@@ -261,16 +264,19 @@ def main(duration=None):
                 if not valid_pattern:
                     ship._state_dict[body.name] = []
 
-                elif len(ship._state_dict[body.name]) > 5 and body.name == "Sun":
-                    print(f"{int((len(ship._state_dict[body.name])-2)/4)} laps")
-
-
+                elif len(ship._state_dict[body.name]) > 5:
+                    orbit_text = FONT.render(
+                        f"{ship.name} : {int((len(ship._state_dict[body.name])-2)/4)} full cycles / {body.name}", 1, body.color)
+                    text_x = 620
+                    text_y = 10 + 22*orbit_count
+                    WIN.blit(orbit_text, (text_x, text_y))
+                    orbit_count += 1
 
         for body in Celestial.list_bodies:
             for i in range(nb_complete_days):
                 body.update_position(Celestial.list_bodies, timestep=discretization_TIMESTEP)
             body.update_position(Celestial.list_bodies, timestep=remains*discretization_TIMESTEP)
-            draw(body, WIN, display_distance_to_sun=False, hitboxes=True)
+            draw(body, WIN, display_distance_to_sun=False, hitboxes=False)
         for body in Moon.list_bodies:
             for i in range(nb_complete_days):
                 body.update_position(Celestial.list_bodies, timestep=discretization_TIMESTEP)
@@ -341,4 +347,7 @@ bug : when moving slider too fast simu diverges
 
 
 what happen when planet are colliding ? title screen ? credit ? easter egg ? 
+
+easter egg == unlock key to move (there already but say it)
+need also to find something to do for reaching a given score
  """
