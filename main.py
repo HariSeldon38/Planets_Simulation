@@ -2,6 +2,28 @@ import pygame
 import math
 from celestial_class import Celestial, Spaceship, Moon
 
+
+def matches_pattern(lst):
+    """
+    return True if list match ANYHOW the pattern
+    return False if
+            values 'right' and 'left' are conscutive
+            value 'space' is surronded by only 'right' or only 'left'
+        (if repeated consecutive values we don't care list will be simplified beforehand)
+            """
+    pattern = ["left", "space", "right", "space"]
+    n = len(lst)
+
+    for offset in range(len(pattern)):
+        match = True
+        for i in range(n):
+            if lst[i] != pattern[(offset + i) % len(pattern)]:
+                match = False
+                break
+        if match:
+            return True
+    return False
+
 pygame.init()
 WIDTH, HEIGHT = 900, 900 #capitals cause constants
 FPS = 30 #speed of simu depend s also on fps... not good
@@ -19,6 +41,7 @@ LAUNCH_SPEED = 1.7e-6
 #Sligshot effet :
 SHIP_MASS = 1e5 #approx 5% sun's mass
 SHIP_SIZE = 4
+CONTROL_RATE = 1000 #how much we'll ctrl the last ship with zqsd
 
 def scale(position, width, height, simu_scale):
     """return position scaled to be displayed properly"""
@@ -31,7 +54,7 @@ def unscale(scaled_position, width, height, simu_scale):
     y = (scaled_position[1] - HEIGHT / 2) / simu_scale
     return x, y
 
-def draw(celestial_body, win, display_distance_to_sun=True):
+def draw(celestial_body, win, display_distance_to_sun=True, hitboxes=False):
     """
     This method is used to draw a celestial body in the window as well as its trajectory
     If body is a Spaceship, no need to scale it, drawn directly where mouse clicks
@@ -57,6 +80,12 @@ def draw(celestial_body, win, display_distance_to_sun=True):
         text_x = min(max(x, 0), WIDTH - 70)
         text_y = min(max(y, 0), HEIGHT - 20)
         win.blit(distance_text, (text_x, text_y))
+
+    if hitboxes:
+        if not type(celestial_body) == Celestial:
+            raise TypeError("Non strict Celestial object do not have a hitbox")
+        pygame.draw.rect(win, "red", celestial_body.rect[0], 1)
+        pygame.draw.rect(win, "red", celestial_body.rect[1], 1)
 
 class Slider:
     def __init__(self, pos: tuple, size: tuple, initial_val: float, min: float, max: float, value_unit: str):
@@ -191,6 +220,17 @@ def main(duration=None):
                     Spaceship.trail = SHIP_TRAIL
                     print("ALL THE SHIP ARE GONE \n")
 
+        key = pygame.key.get_pressed()
+        if Spaceship.last_ship:
+            if key[pygame.K_z]:
+                Spaceship.last_ship.y_vel -= CONTROL_RATE
+            if key[pygame.K_s]:
+                Spaceship.last_ship.y_vel += CONTROL_RATE
+            if key[pygame.K_q]:
+                Spaceship.last_ship.x_vel -= CONTROL_RATE
+            if key[pygame.K_d]:
+                Spaceship.last_ship.x_vel += CONTROL_RATE
+
         if tmp_obj_pos:
             pygame.draw.line(WIN,"white", tmp_obj_pos, mouse_pos, 2)
             pygame.draw.circle(WIN, "red", tmp_obj_pos, SHIP_SIZE)
@@ -205,12 +245,37 @@ def main(duration=None):
             ship.update_position(Spaceship.list_bodies + Celestial.list_bodies, timestep=remains*discretization_TIMESTEP)
             draw(ship, WIN, display_distance_to_sun=False)
             remove_lost_ship(ship)
-        for body in Celestial.list_bodies + Moon.list_bodies:
+
+            # Check if ship is orbiting around a planet
+            ship_px_position = scale((ship.x, ship.y), WIDTH,HEIGHT,Celestial.simu_SCALE)
+            for body in Celestial.list_bodies:
+
+                if body.rect[0].collidepoint(ship_px_position):
+                    ship._state_dict[body.name].append("left")
+                elif body.rect[1].collidepoint(ship_px_position):
+                    ship._state_dict[body.name].append("right")
+                else:
+                    ship._state_dict[body.name].append("space")
+
+                valid_pattern = matches_pattern(ship.state_dict[body.name]) #without underscore =simplify before returned
+                if not valid_pattern:
+                    ship._state_dict[body.name] = []
+
+                elif len(ship._state_dict[body.name]) > 5 and body.name == "Sun":
+                    print(f"{int((len(ship._state_dict[body.name])-2)/4)} laps")
+
+
+
+        for body in Celestial.list_bodies:
+            for i in range(nb_complete_days):
+                body.update_position(Celestial.list_bodies, timestep=discretization_TIMESTEP)
+            body.update_position(Celestial.list_bodies, timestep=remains*discretization_TIMESTEP)
+            draw(body, WIN, display_distance_to_sun=False, hitboxes=True)
+        for body in Moon.list_bodies:
             for i in range(nb_complete_days):
                 body.update_position(Celestial.list_bodies, timestep=discretization_TIMESTEP)
             body.update_position(Celestial.list_bodies, timestep=remains*discretization_TIMESTEP)
             draw(body, WIN, display_distance_to_sun=False)
-
 
         pygame.display.update()
 
@@ -226,6 +291,13 @@ if __name__ == "__main__":
 
 """what to do now : 
  
+ First thing to do if returning to this project :
+ fix the awfull code I made to implement hitboxes
+
+detect if orbit clockwork or anticlockwork
+
+label Spaceship with a given name list)
+
 random asteroid that croses the screen (add it to planet list wich will be a class attribute and delete after too far away x or y
 class Asteroid(Spaceship):
     pass

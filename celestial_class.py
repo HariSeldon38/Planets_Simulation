@@ -1,4 +1,25 @@
 import numpy
+import pygame
+
+def simplify_consecutive(lst):
+    """remove consecutive repeated values
+    in lists contained in a dict"""
+    if not lst:
+        return []
+
+    simplified = [lst[0]]
+    for val in lst[1:]:
+        if val != simplified[-1]:
+            simplified.append(val)
+    return simplified
+
+WIDTH, HEIGHT = 900, 900
+def scale(position, width, height, simu_scale):
+    """I know it is awful to code like that
+    but I want to get to the next project now so f it"""
+    x = position[0] * simu_scale + width / 2
+    y = position[1] * simu_scale + height / 2
+    return x,y
 
 class Celestial:
     """
@@ -48,6 +69,22 @@ class Celestial:
         self.x_vel = x_vel #x_axis velocity in m/s
         self.y_vel = y_vel #y_axis velocity in m/s
         self.list_bodies.append(self)
+
+        if self.__class__ == Celestial:
+            if self.sun:
+                self._leftrect = pygame.Rect(0, 0, 900, 20)  # checkpoint that will follow sun's position ...
+                self._rightrect = pygame.Rect(0, 0, 900, 20)  # ... will be used to detect if a ship is orbiting around the sun
+            else:
+                self._leftrect = pygame.Rect(0, 0, 55, 20)  # checkpoint that will follow planet position
+                self._rightrect = pygame.Rect(0, 0, 55, 20)
+            self._leftrect.midright = (scale((x, y), WIDTH, HEIGHT, Celestial.simu_SCALE))
+            self._rightrect.midleft = (scale((x, y), WIDTH, HEIGHT, Celestial.simu_SCALE))
+
+    @property
+    def rect(self):
+        self._leftrect.midright = (scale((self.x, self.y), WIDTH, HEIGHT, Celestial.simu_SCALE))
+        self._rightrect.midleft = (scale((self.x, self.y), WIDTH, HEIGHT, Celestial.simu_SCALE))
+        return self._leftrect, self._rightrect
 
     def attraction(self, other):
         """
@@ -136,5 +173,73 @@ class Spaceship(Celestial):
 
         return force_x, force_y
 
+    last_ship = None
+    def __init__(self, name, x, y, x_vel, y_vel, radius, color, mass, perceived_mass=None, sun=False):
+        super().__init__(name, x, y, x_vel, y_vel, radius, color, mass, perceived_mass, sun)
+        Spaceship.last_ship = self
+        self._state_dict = {"Sun":[], #each of these lists will contain general postion arount a given planet
+                           "Earth":[],  # 3 states possible : "left", "right", "space"
+                           "Venus":[],    # left mean ship on leftrect of the planet
+                           "Mars":[],        #right mean ship on rightrect
+                           "Mercury":[],        #space mean ship on neither rect
+                                        }
+
+    @property
+    def state_dict(self):
+        for key in self._state_dict:
+            self._state_dict[key] = simplify_consecutive(self._state_dict[key])
+        return self._state_dict
+
+
 class Moon(Spaceship):
     list_bodies = []
+
+if __name__ == "__main__":
+    def matches_pattern(lst):
+        pattern = ["left", "space", "right", "space"]
+        n = len(lst)
+
+        for offset in range(len(pattern)):
+            match = True
+            for i in range(n):
+                if lst[i] != pattern[(offset + i) % len(pattern)]:
+                    match = False
+                    break
+            if match:
+                return True
+        return False
+
+    print(matches_pattern(["left", "space", "right", "space"]))  # True
+    print(matches_pattern(["left", "space", "right", "space", "left"]))  # True
+    print(matches_pattern(["space"]))  # True
+    print(matches_pattern(["right", "space"]))  # True
+    print(matches_pattern(["right", "space", "right"]))  # False
+    print("\n")
+    print(matches_pattern(["left", "space", "right", "space"]))  # ✅ True
+    print(matches_pattern(["space"]))  # ✅ True
+    print(matches_pattern(["right", "space"]))  # ✅ True
+    print(matches_pattern(["right", "space", "right"]))  # ❌ False
+    print(matches_pattern(["space", "right", "space", "left"]))  # ✅ True
+    print(matches_pattern(["left", "space", "right", "left"]))  # ❌ False
+    print(matches_pattern([]))
+
+    class test():
+        def __init__(self):
+            Spaceship.last_ship = self
+            self._state_dict = {"Sun": [],  # each of these lists will contain general postion arount a given planet
+                                "Earth": [],  # 3 states possible : "left", "right", "space"
+                                "Venus": [],  # left mean ship on leftrect of the planet
+                                "Mars": [],  # right mean ship on rightrect
+                                "Mercury": [],  # space mean ship on neither rect
+                                }
+
+
+        @property
+        def state_dict(self):
+            self._state_dict = simplify_consecutive(self._state_dict)
+            return self._state_dict
+
+    a = test()
+
+
+
