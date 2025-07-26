@@ -1,5 +1,6 @@
 import pygame
 import math
+import copy
 from celestial_class import Celestial, Spaceship, Moon
 
 
@@ -16,7 +17,7 @@ JUPITER = pygame.transform.scale(pygame.image.load("jupiter.png"), (25*2,25*2))
 FONT = pygame.font.SysFont("comicsans", 16)
 BACKGND = pygame.transform.scale(pygame.image.load("background.jpg"), (WIDTH, HEIGHT))
 TRAIL = 120 #nb pts disp in trail of celestial bodies, OoM:240 is Mercury full cycle
-SHIP_TRAIL = 15
+SHIP_TRAIL = 40
 LAUNCH_SPEED = 1.7e-6
 #Sligshot effet :
 SHIP_MASS = 1e5 #approx 5% sun's mass
@@ -151,6 +152,7 @@ def create_ship(loc, mouse):
 
 def remove_lost_ship(ship):
     """Check if ship has gone far offscreen or has collided with a planet and remove it if so."""
+    console_text_lost_ship = None
 
     #CHECK IF GO OFFSCREEN AND REMOVE
     tol = 0 #how much pixels afar from screen to consider lost
@@ -158,8 +160,8 @@ def remove_lost_ship(ship):
     off_screen = x < -tol or x > WIDTH+tol or y < -tol or y > HEIGHT+tol
     if off_screen:
         Spaceship.list_bodies.remove(ship)
-        print("A ship drifts eternally through space, say goodbye...")
-        print(f"there are {len(Spaceship.list_bodies)} ships left.")
+        console_text_lost_ship = FONT.render(
+            f"{ship.name} drifts eternally through space, there are {len(Spaceship.list_bodies)} ships left.", 1, "lightgray")
 
     #CHECK IF COLLIDE AND REMOVE
     for planet in Celestial.list_bodies: #could improve perf to scale it once, after update pos
@@ -167,10 +169,12 @@ def remove_lost_ship(ship):
         collided = math.sqrt((x-x_planet)**2 + (y-y_planet)**2) <= planet.radius
         if collided:
             Spaceship.list_bodies.remove(ship)
-            planet.mass += 3.3e16
+            planet.mass += 6e16
             planet.radius += 0.1
-            print(f"A ship has merged with {planet.name}. Don't feed it too much !")
-            print(f"there are {len(Spaceship.list_bodies)} ships left.")
+            console_text_lost_ship = FONT.render(
+                f"{ship.name} has merged with {planet.name}. Don't feed it too much ! "
+                f"There are {len(Spaceship.list_bodies)} ships left.", 1, "red")
+    return console_text_lost_ship
 
 def main(duration=None):
     """
@@ -178,9 +182,13 @@ def main(duration=None):
                      if None, simu ends only if manually closed
                      if 0, simu will not run
     """
+    SCORE = 0
+    ORBIT_DISCOVERED = False
+    SATELLITE_DISCOVERED = False
+    console_text = FONT.render(f"", 1, WHITE) #placeholder
     WIN = pygame.display.set_mode((WIDTH, HEIGHT))  # this is our window (a pygame surface)
     pygame.display.set_caption("Planet Simulation")
-    simu_TIMESTEP_slider = Slider((40, 40), (450, 15), Celestial.simu_TIMESTEP/3600, 1, 100, "hour/sec")
+    simu_TIMESTEP_slider = Slider((10, 10), (450, 15), Celestial.simu_TIMESTEP/3600, 1, 100, "hour/sec")
 
     clock = pygame.time.Clock() #needed in to ctrl speed of the sim and not let it be the speed of our computer
     run = True
@@ -219,7 +227,7 @@ def main(duration=None):
                     Spaceship.set_simu_SCALE(250/ Celestial.AU) #1AU=100px
                     Spaceship.set_simu_TIMESTEP(3600*10) #10 hours
                     Spaceship.trail = SHIP_TRAIL
-                    print("ALL THE SHIP ARE GONE \n")
+                    console_text = FONT.render(f"ALL THE SHIP ARE GONE, THAT'S WHAT A CALL A CLEAN START", 1, WHITE)
 
         key = pygame.key.get_pressed()
         if Spaceship.last_ship:
@@ -240,16 +248,20 @@ def main(duration=None):
         nb_days_TIMESTEP = Celestial.get_simu_TIMESTEP()/(discretization_TIMESTEP)
         nb_complete_days = round(nb_days_TIMESTEP)
         remains = nb_days_TIMESTEP - nb_complete_days #we keep the rest
-
+        
         orbit_count = 0
         for ship in Spaceship.list_bodies[:]:
             for i in range(nb_complete_days):  # we will update 1 quarter day at the time
                 ship.update_position(Spaceship.list_bodies + Celestial.list_bodies, timestep=discretization_TIMESTEP)
             ship.update_position(Spaceship.list_bodies + Celestial.list_bodies, timestep=remains*discretization_TIMESTEP)
             draw(ship, WIN, display_distance_to_sun=False)
-            remove_lost_ship(ship)
+            tmp = remove_lost_ship(ship)
+            if tmp:
+                console_text = tmp
+                SCORE -= 0.3
 
             # Check if ship is orbiting around a planet
+            ship.previous_state_dict = copy.deepcopy(ship._state_dict) #storing precedent dict to compute score only if new cycles and not on every frame
             ship_px_position = scale((ship.x, ship.y), WIDTH,HEIGHT,Celestial.simu_SCALE)
             for body in Celestial.list_bodies:
 
@@ -265,12 +277,20 @@ def main(duration=None):
                     ship._state_dict[body.name] = []
 
                 elif len(ship._state_dict[body.name]) > 5:
+                    if not ORBIT_DISCOVERED and body.name == "Sun":
+                        console_text = FONT.render(f"Congrats ! You lauched a ship that orbits around the Sun ! What can you try now ?", 1, YELLOW)
+                        ORBIT_DISCOVERED = True
+                    if not SATELLITE_DISCOVERED and body.name in ['Earth', 'Mars']:
+                        console_text = FONT.render(f"Wow ! You lauched a satellite around a planet ? That is impressive !", 1, BLUE)
+                        SATELLITE_DISCOVERED = True
                     orbit_text = FONT.render(
                         f"{ship.name} : {int((len(ship._state_dict[body.name])-2)/4)} full cycles / {body.name}", 1, body.color)
                     text_x = 620
                     text_y = 10 + 22*orbit_count
                     WIN.blit(orbit_text, (text_x, text_y))
                     orbit_count += 1
+
+            SCORE += ship.compute_score()
 
         for body in Celestial.list_bodies:
             for i in range(nb_complete_days):
@@ -283,6 +303,11 @@ def main(duration=None):
             body.update_position(Celestial.list_bodies, timestep=remains*discretization_TIMESTEP)
             draw(body, WIN, display_distance_to_sun=False)
 
+        if ORBIT_DISCOVERED or SATELLITE_DISCOVERED:
+            score_text = FONT.render(
+                f"Score : {round(SCORE, 1)}", 1, body.color)
+            WIN.blit(score_text, (30, 50))
+        WIN.blit(console_text, (10, 870))
         pygame.display.update()
 
     pygame.quit

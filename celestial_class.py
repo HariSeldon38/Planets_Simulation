@@ -72,11 +72,14 @@ class Celestial:
 
         if self.__class__ == Celestial:
             if self.sun:
-                self._leftrect = pygame.Rect(0, 0, 900, 20)  # checkpoint that will follow sun's position ...
-                self._rightrect = pygame.Rect(0, 0, 900, 20)  # ... will be used to detect if a ship is orbiting around the sun
+                self._leftrect = pygame.Rect(0, 0, 900, 30)  # checkpoint that will follow sun's position ...
+                self._rightrect = pygame.Rect(0, 0, 900, 30)  # ... will be used to detect if a ship is orbiting around the sun
+            elif not self.name == "Mercury":
+                self._leftrect = pygame.Rect(0, 0, 65, 30)  # checkpoint that will follow planet position
+                self._rightrect = pygame.Rect(0, 0, 65, 30)
             else:
-                self._leftrect = pygame.Rect(0, 0, 55, 20)  # checkpoint that will follow planet position
-                self._rightrect = pygame.Rect(0, 0, 55, 20)
+                self._leftrect = pygame.Rect(0, 0, 0,0)  # (almotst) impossible to satellite around Mercury
+                self._rightrect = pygame.Rect(0, 0, 0,0,) #and triggers unexpectedly when orbit around sun
             self._leftrect.midright = (scale((x, y), WIDTH, HEIGHT, Celestial.simu_SCALE))
             self._rightrect.midleft = (scale((x, y), WIDTH, HEIGHT, Celestial.simu_SCALE))
 
@@ -183,6 +186,7 @@ class Spaceship(Celestial):
                            "Mars":[],        #right mean ship on rightrect
                            "Mercury":[],        #space mean ship on neither rect
                                         }
+        self.previous_state_dict = self._state_dict
 
     @property
     def state_dict(self):
@@ -191,55 +195,23 @@ class Spaceship(Celestial):
         return self._state_dict
 
 
+
+    def compute_score(self):
+        score_table = {"Sun": 1,
+                       "Earth": 5,
+                       "Venus": 15,
+                       "Mars": 10,
+                       "Mercury": [], }
+        score = 0
+        for key in self._state_dict:
+            diff = int((len(self._state_dict[key]) - 2) / 4) - int((len(self.previous_state_dict[key]) - 2) / 4)
+            if diff == 1:
+                score += score_table[key]
+            elif not diff<=0:
+                print(f"Something strange is going on, cycle increased {diff} units at once")
+        return score
+
 class Moon(Spaceship):
     list_bodies = []
-
-if __name__ == "__main__":
-    def matches_pattern(lst):
-        pattern = ["left", "space", "right", "space"]
-        n = len(lst)
-
-        for offset in range(len(pattern)):
-            match = True
-            for i in range(n):
-                if lst[i] != pattern[(offset + i) % len(pattern)]:
-                    match = False
-                    break
-            if match:
-                return True
-        return False
-
-    print(matches_pattern(["left", "space", "right", "space"]))  # True
-    print(matches_pattern(["left", "space", "right", "space", "left"]))  # True
-    print(matches_pattern(["space"]))  # True
-    print(matches_pattern(["right", "space"]))  # True
-    print(matches_pattern(["right", "space", "right"]))  # False
-    print("\n")
-    print(matches_pattern(["left", "space", "right", "space"]))  # ✅ True
-    print(matches_pattern(["space"]))  # ✅ True
-    print(matches_pattern(["right", "space"]))  # ✅ True
-    print(matches_pattern(["right", "space", "right"]))  # ❌ False
-    print(matches_pattern(["space", "right", "space", "left"]))  # ✅ True
-    print(matches_pattern(["left", "space", "right", "left"]))  # ❌ False
-    print(matches_pattern([]))
-
-    class test():
-        def __init__(self):
-            Spaceship.last_ship = self
-            self._state_dict = {"Sun": [],  # each of these lists will contain general postion arount a given planet
-                                "Earth": [],  # 3 states possible : "left", "right", "space"
-                                "Venus": [],  # left mean ship on leftrect of the planet
-                                "Mars": [],  # right mean ship on rightrect
-                                "Mercury": [],  # space mean ship on neither rect
-                                }
-
-
-        @property
-        def state_dict(self):
-            self._state_dict = simplify_consecutive(self._state_dict)
-            return self._state_dict
-
-    a = test()
-
 
 
