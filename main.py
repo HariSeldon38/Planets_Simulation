@@ -1,9 +1,9 @@
 import pygame
 import math
 import copy
+import json
+import random
 from celestial_class import Celestial, Spaceship, Moon
-
-
 
 pygame.init()
 WIDTH, HEIGHT = 900, 900 #capitals cause constants
@@ -23,6 +23,15 @@ LAUNCH_SPEED = 1.7e-6
 SHIP_MASS = 1e5 #approx 5% sun's mass
 SHIP_SIZE = 4
 CONTROL_RATE = 1000 #how much we'll ctrl the last ship with zqsd
+
+def load_ship_names(filename="ship_names.json"):
+    with open(filename, "r") as f:
+        data = json.load(f)
+    return data.get("names", [])
+def get_random_ship_name(names):
+    if not names:
+        raise ValueError("Empty name list.")
+    return random.choice(names)
 
 def matches_pattern(lst):
     """
@@ -139,7 +148,7 @@ def init_planets():
     venus = Celestial("Venus", 0.723*Celestial.AU, 0, 0, -35.02 * 1000, 11, WHITE, 3.24937322e+14, 3.33714000e+16)
     moon = Moon("Moon", -1.1 * Celestial.AU, 0, 0, 84 *1000, 3, WHITE, 4.90292609e+12)
 
-def create_ship(loc, mouse):
+def create_ship(loc, mouse, name):
     """Basic decomposition of velocity in function of position object and position mouse
     just draw a triangle if unclear"""
     x, y = unscale(loc, WIDTH, HEIGHT, Celestial.simu_SCALE) #adjust scale to fit with how we position the planets
@@ -147,7 +156,7 @@ def create_ship(loc, mouse):
 
     x_vel = (x_mouse - x) * LAUNCH_SPEED
     y_vel = (y_mouse - y) * LAUNCH_SPEED
-    obj = Spaceship("Spaceship", x, y, x_vel, y_vel, SHIP_SIZE, "red", SHIP_MASS)
+    obj = Spaceship(name, x, y, x_vel, y_vel, SHIP_SIZE, "red", SHIP_MASS)
     return obj
 
 def remove_lost_ship(ship):
@@ -189,6 +198,7 @@ def main(duration=None):
     WIN = pygame.display.set_mode((WIDTH, HEIGHT))  # this is our window (a pygame surface)
     pygame.display.set_caption("Planet Simulation")
     simu_TIMESTEP_slider = Slider((10, 10), (450, 15), Celestial.simu_TIMESTEP/3600, 1, 100, "hour/sec")
+    ship_names = load_ship_names("ship_names.json")
 
     clock = pygame.time.Clock() #needed in to ctrl speed of the sim and not let it be the speed of our computer
     run = True
@@ -217,7 +227,7 @@ def main(duration=None):
                 run = False
             if event.type == pygame.MOUSEBUTTONDOWN and not simu_TIMESTEP_slider.container_rect.collidepoint(mouse_pos):
                 if tmp_obj_pos:
-                    spaceship = create_ship(tmp_obj_pos, mouse_pos)
+                    spaceship = create_ship(tmp_obj_pos, mouse_pos, get_random_ship_name(ship_names))
                     tmp_obj_pos = None
                 else:
                     tmp_obj_pos = mouse_pos
@@ -248,7 +258,7 @@ def main(duration=None):
         nb_days_TIMESTEP = Celestial.get_simu_TIMESTEP()/(discretization_TIMESTEP)
         nb_complete_days = round(nb_days_TIMESTEP)
         remains = nb_days_TIMESTEP - nb_complete_days #we keep the rest
-        
+
         orbit_count = 0
         for ship in Spaceship.list_bodies[:]:
             for i in range(nb_complete_days):  # we will update 1 quarter day at the time
@@ -276,7 +286,7 @@ def main(duration=None):
                 if not valid_pattern:
                     ship._state_dict[body.name] = []
 
-                elif len(ship._state_dict[body.name]) > 5:
+                elif len(ship._state_dict[body.name]) > 6:
                     if not ORBIT_DISCOVERED and body.name == "Sun":
                         console_text = FONT.render(f"Congrats ! You lauched a ship that orbits around the Sun ! What can you try now ?", 1, YELLOW)
                         ORBIT_DISCOVERED = True
@@ -284,8 +294,8 @@ def main(duration=None):
                         console_text = FONT.render(f"Wow ! You lauched a satellite around a planet ? That is impressive !", 1, BLUE)
                         SATELLITE_DISCOVERED = True
                     orbit_text = FONT.render(
-                        f"{ship.name} : {int((len(ship._state_dict[body.name])-2)/4)} full cycles / {body.name}", 1, body.color)
-                    text_x = 620
+                        f"{ship.name} : {int((len(ship._state_dict[body.name])-2)/4)} full cycles", 1, body.color)
+                    text_x = 595
                     text_y = 10 + 22*orbit_count
                     WIN.blit(orbit_text, (text_x, text_y))
                     orbit_count += 1
@@ -321,55 +331,22 @@ if __name__ == "__main__":
     main()
 
 """what to do now : 
- 
- First thing to do if returning to this project :
- fix the awfull code I made to implement hitboxes
 
-detect if orbit clockwork or anticlockwork
+First thing to do if returning to this project :
+fix the awfull code I made to implement hitboxes
+downscale all number by 1e15 in order to ease my computer
+remove double scale : keep only pixels
 
-label Spaceship with a given name list)
+detect if orbit clockwork or anticlockwork : low
+detect if orbit around Venus cause possible with zqsd keys but very difficult could be an achievement : meddium
 
 random asteroid that croses the screen (add it to planet list wich will be a class attribute and delete after too far away x or y
-class Asteroid(Spaceship):
-    pass
-function that randomly create asteroid with random params called every frames
-
-day * 365 does not work why ? fps control speed need to investigate that as well
-
-bouton pour reset view sur soleil
-
-bug : get_value not correspond to value set in first place
-selon gpt c'est une erreur d'arondis
-en effet si je passe de max vlaue 732 à 48 il n'y a plus d'erreur, le slider a assez de px par rapport à ce qu'il rpz
-test anecdotique : faire en sorte que la valeur qu'on met dans le slider correspond à celle qui est récupérer par le script
 
 adding reverse time and delete old value of trajectory
 
 ajouter test : (GUI test)
 default parameter works, circles
 using slider works, it indeed speed up simul
-
-make ship disapear
-or rebound
-or merge with body
-create a chrono and best score to make is stay the longer (but need to make it disapear if border of screen
-
-
-fix background
-fix middle button creating ships : NO, great feature
-
-downscale all number by 1e15 in order to ease my computer
-
-lower influence of sun if close to a planet in order to make it possible to create sattelite
-
-best idea so far :
-    objectifs : - last longer
-                - orbits around the sun (the more the better)
-                - sattelite, ultimate goat
-        dont want to create score but could find a way to check success and grant smth in return
-        
-bug : when moving slider too fast simu diverges
-
 
 what happen when planet are colliding ? title screen ? credit ? easter egg ? 
 

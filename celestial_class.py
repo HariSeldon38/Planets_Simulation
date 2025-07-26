@@ -72,8 +72,8 @@ class Celestial:
 
         if self.__class__ == Celestial:
             if self.sun:
-                self._leftrect = pygame.Rect(0, 0, 900, 30)  # checkpoint that will follow sun's position ...
-                self._rightrect = pygame.Rect(0, 0, 900, 30)  # ... will be used to detect if a ship is orbiting around the sun
+                self._leftrect = pygame.Rect(0, 0, 900, 50)  # checkpoint that will follow sun's position ...
+                self._rightrect = pygame.Rect(0, 0, 900, 50)  # ... will be used to detect if a ship is orbiting around the sun
             elif not self.name == "Mercury":
                 self._leftrect = pygame.Rect(0, 0, 65, 30)  # checkpoint that will follow planet position
                 self._rightrect = pygame.Rect(0, 0, 65, 30)
